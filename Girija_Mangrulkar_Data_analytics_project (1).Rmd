@@ -1,0 +1,441 @@
+---
+title: "Data Analysis Project"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE,
+                      comment = "")
+```
+
+
+
+# Student Information
+
+**Name**: Girija Mangrulkar
+**G Number**: G01284807
+
+
+
+
+# Introduction
+
+This semester we will be working with a dataset of all domestic outbound flights from Dulles International Airport in 2016.
+
+Airports depend on accurate flight departure and arrival estimates to maintain operations, profitability, customer satisfaction, and compliance with state and federal laws. Flight performance, including departure and arrival delays must be monitored, submitted to the Federal Aviation Agency (FAA) on a regular basis, and minimized to maintain airport operations. **The FAA considered a flight to be delayed if it has an arrival delay of at least 15 minutes**.
+
+The executives at Dulles International Airport have hired you as a Data Science consultant to perform an exploratory data analysis on all domestic flights from 2016 and produce an executive summary of your key insights and recommendations to the executive team.
+
+Before you begin, take a moment to read through the following airline flight terminology to familiarize yourself with the industry: [Airline Flight Terms](https://www.myairlineflight.com)
+
+
+
+## Dulles Flights Data
+
+The `flights_df` data frame is loaded below and consists of 33,433 flights from IAD (Dulles International) in 2016. The rows in this data frame represent a single flight with all of the associated features that are displayed in the table below.
+
+**Note**: If you have not installed the `tidyverse` package, please do so by going to the `Packages` tab in the lower right section of RStudio, select the `Install` button and type `tidyverse` into the prompt. If you cannot load the data, then try downloading the latest version of R (at least 4.0). The `readRDS()` function has different behavior in older versions of `R` and may cause loading issues.
+
+
+
+```{r}
+
+library(tidyverse)
+
+flights_df <- readRDS(url('https://gmubusinessanalytics.netlify.app/data/dulles_flights.rds'))
+
+```
+
+
+### Raw Data
+
+```{r}
+flights_df
+```
+
+
+# Exploratory Data Analysis
+
+
+Executives at this company have hired you as a data science consultant to evaluate their flight data and make recommendations on flight operations and strategies for minimizing flight delays.
+
+You must think of **at least 8 relevant questions** that will provide evidence for your recommendations.
+
+The goal of your analysis should be discovering which variables drive the differences between flights that are early/on-time vs. flights that are delayed.
+
+Some of the many questions you can explore include:
+
+-   Are flight delays affected by taxi-out time? Do certain airlines or time of 
+    year lead to greater taxi out times (i.e. traffic jams on the runways)?
+
+-   Are certain times of the day or year problematic?
+
+-   Are certain destination or airlines prone to delays?
+
+
+You must answer each question and provide supporting data summaries with either a summary data frame (using `dplyr`/`tidyr`) or a plot (using `ggplot`) or both.
+
+In total, you must have a minimum of 5 plots and 4 summary data frames for the exploratory data analysis section. Among the plots you produce, you must have at least 4 different types (ex. box plot, bar chart,
+histogram, heat map, etc...)
+
+Each question must be answered with supporting evidence from your tables and plots.
+
+```{r}
+library(ggplot2)
+```
+
+## Question 1
+
+**Question**: Which city has the most number of arrival from IAD ?
+
+**Answer**:
+From the graph we can see that San Francisco is the maximum arrival as it has maximum flights arrived in San Francisco from IAD. Total 4034 flights out of 33433 has been arrived in San Francisco.
+
+```{r}
+flights_df%>%
+ ggplot(aes(x=dest_airport_city))+
+  geom_bar(position = position_dodge(width = 50),fill="red")+
+  theme(axis.text.x = element_text(size=8,angle=90),plot.title = element_text(hjust = 0))+
+  labs(title = "Most number of arrivals ")+
+  xlab("City")+
+  ylab("Count")+
+  geom_text(aes(label=..count..),stat="count",vjust = -0.2, colour = "black",size=2)
+```
+
+
+
+## Question 2
+
+**Question**:
+Which month has maximum and minimum number of flights departed from IaD?
+
+
+**Answer**: 
+For minimum, we can see from the graph that February has the minimum value which is 2183.
+For Maximum, we can see that July has the maximum value which is 3120.out of 33433 observations.
+
+
+```{r}
+flights_df %>%
+  group_by(month)%>%
+  summarise(total=n()) %>% 
+  ggplot(aes(x=month,y=total, group=1))+
+  geom_line(color="red")+
+  geom_point(color="red")+ 
+  theme(axis.text.x = element_text(size=8,angle=90),plot.title = element_text(hjust = 0))+
+  labs(title = "Minimum and maximum flights in a Month ")+
+  xlab("Month")+
+  ylab("Count")+
+  geom_text(aes(label=total), size=3,vjust = -0.5)
+```
+
+
+
+## Question 3
+
+**Question**: 
+Which region has maximum percentage of arrivals?
+
+**Answer**:
+From IAD, the west regions has the maximum percentage 46.53% and middle Atlantic has minimum of 0.25%
+
+```{r}
+library(dplyr)
+pie <- flights_df %>% 
+  group_by(dest_airport_region) %>% 
+  count() %>% 
+  ungroup() %>% 
+  mutate(perc = `n` / sum(`n`)) %>% 
+  arrange(perc) %>%
+  mutate(labels = scales::percent(perc))
+
+pie
+
+ggplot(pie, aes(x = "", y = perc, fill = dest_airport_region)) +
+  geom_col() +
+  geom_text(aes(label = labels), position = position_stack(vjust = 0.5)) +
+  geom_label(aes(label = labels),position = position_stack(vjust = 0.5), show.legend = FALSE) +
+  theme(plot.title = element_text(hjust = 0))+
+  labs(title = "Minimum and maximum flights in 2016")+
+  xlab("Data in Percent")+
+  ylab("Data in Percent")+
+  coord_polar(theta = "y")+
+  guides(fill = guide_legend(title = "Region")) +
+  scale_fill_viridis_d() 
+```
+
+## Question 4
+
+**Question**:
+Is there any relation between arrival delay and departure delay?
+
+**Answer**:
+Yes, we can calculate the relationship between arrival delay and departure delay for each airline using scatter plot. The flight is considered as a delayed flight only if it is delayed by 15 minutes of its arrival time. We can see the United airlines has the most number of delayed flights. Also we can see the outliers for delta airlines which has 911 arrival delays and 914 departure delays.
+
+
+```{r}
+library(plotly)
+flights_df%>%
+  select(airline,arrival_delay,dep_delay)%>%
+  filter(airline =="United"|airline =="American"|airline =="Delta"|airline =="Southwest"|airline =="JetBlue"|airline =="Virgin America"|airline =="Frontier"|airline =="ExpressJet"|airline =="SkyWest"|airline =="Alaska",arrival_delay>15)%>%
+  arrange(desc(arrival_delay))%>%
+  count(airline)
+
+#Arrival and departure delay of all airlines
+flights_delay<-ggplot(flights_df, aes(x= dep_delay, y=arrival_delay,color=airline)) +xlim(-30, 1000) + geom_point()+
+  labs(title = "Airlines that have record number of delays")+
+  xlab("Departure delay (mins)")+
+  ylab("Arrival Delay (mins)")+theme(plot.title = element_text(hjust = 0.5))
+
+ggplotly(flights_delay)
+```
+
+
+## Question 5
+
+**Question**:
+How distance and airlines are related to each other ?
+
+**Answer**:
+Using boxplot, we can calculate the relationship between airline and the distance traveled by the airline. From the boxplot we can see that United airlines has traveled more distance than any other flight nearly about the average of 1500.
+
+
+```{r}
+ggplot(data = flights_df, mapping = aes(x = reorder(airline, distance, FUN = median), y =distance, fill = airline)) +
+  geom_boxplot()+ coord_flip()+
+  xlab("Airline")+
+  ylab("Distance")+
+  ggtitle("Boxplot")+
+  guides(fill = guide_legend(title = "Airline"))
+geom_text(size=3,vjust = -0.5)
+```
+
+
+
+
+
+
+## Question 6
+
+**Question**:
+Which month has the most average arrival delay for each airline?
+
+**Answer**:
+Each airline has unstable arrival delay every month. We can see that June,July has more average delays as it is Summer holiday season.
+
+
+```{r}
+flights_df%>%
+  group_by(month,airline)  %>%
+  summarise(average_arrival_delay = mean(arrival_delay, na.rm =TRUE)) %>%
+  ggplot(aes(y = average_arrival_delay, x = month ,group=airline, color=airline))+
+  geom_line(lwd = 1)+
+  labs(title = "Monthly average delay in minutes by airline")+
+  xlab("Month")+
+  ylab("Monthly average arrival delay in minutes")+
+  theme(axis.text.x = element_text(size=8,angle=90),plot.title = element_text(hjust = 0))
+```
+
+
+## Question 7
+
+**Question**:
+Which day has the maximum frequency of flights ?
+
+**Answer**: 
+Friday has the most number of flights from all seven days.
+
+```{r}
+flights_df %>%
+  group_by(weekday)%>%
+  summarise(total=n()) %>% 
+  ggplot(aes(x=weekday,y=total, group=1))+
+  geom_line(color = "red")+
+  geom_point(color = "red")+ 
+  theme(axis.text.x = element_text(size=8,angle=90))+
+  labs(title = "Busiest day in a week")+
+  xlab("Day")+
+  ylab("Count")+
+  geom_text(aes(label=total), size=3,vjust = -0.5)
+```
+## Question 8
+
+**Question**:
+What is the relationship between all available numeric data ?
+
+**Answer**:
+
+Heatmap is used to show the relationship between all numeric columns. Dark blue shows the one-to-one relationship of the column. If there is no relationship there will not be any colour.
+
+
+```{r}
+library(corrplot)
+plot<-flights_df%>%
+select(dep_time,dep_delay,taxi_out,wheels_on,taxi_in,arrival_time,sch_arrival_time,arrival_delay)
+na.omit
+corrplot(cor(plot),method = "square",tl.cex = 1)
+```
+
+## Question 9
+
+
+
+**Question**:
+Which region has the maximum delay in percentage ?
+
+
+**Answer**:
+Northeast region has the maximum delayed flights. It has the 18% delay. 
+
+
+```{r}
+flights_delayed_flight <- 
+flights_df %>% 
+  filter(arrival_delay>15)
+```
+
+
+```{r}
+library(reshape2)
+
+flight_region_summarised <-left_join(
+ 
+  #table 1 to get the total number of flight in each region
+flights_df%>%
+  group_by(dest_airport_region)%>%
+  summarise(Total_Count=n()),
+
+  #table 2 to get the total number of delayed flight in each region
+flights_delayed_flight%>%
+  group_by(dest_airport_region)%>%
+  summarise(Total_delayed_Count=n()), by=c("dest_airport_region")) %>%
+  
+  mutate("Delay_percent"=100*Total_delayed_Count/Total_Count )%>%
+select(dest_airport_region,"Delay_percent")
+
+flight_region_summarised
+
+flight_region_summarised%>%
+  ggplot(aes(x=dest_airport_region, y=flight_region_summarised$Delay_percent, fill=dest_airport_region))+
+  geom_bar(stat='identity', position='dodge') +
+  xlab("Region")+
+  ylab("Delay percentage")+
+  ggtitle("Delay percentage by region")+
+  theme(plot.title = element_text(hjust = 0.5),axis.text.x = element_text(size=8,angle=90))+
+  guides(fill = guide_legend(title = "Region"))+
+  geom_text(aes(label=flight_region_summarised$Delay_percent), size=3,vjust = 0.2,angle=90, hjust=1)
+```
+
+## Question 10
+
+**Question**:
+
+Which state has the maximum delay of flights?
+
+**Answer**:
+Maine has the maximum flight delay of 53% approximately.
+
+```{r}
+flight_dest_airport_state_summarised <-left_join(
+ 
+  #table 1 to get the total number of flight in each state
+flights_df%>%
+  group_by(dest_airport_state)%>%
+  summarise(Total_Count=n()),
+
+  #table 2 to get the total number of delayed flight in each state
+flights_delayed_flight%>%
+  group_by(dest_airport_state)%>%
+  summarise(Total_delayed_Count=n())
+, by=c("dest_airport_state")) %>%
+  
+  mutate("Delay_percent"=100*Total_delayed_Count/Total_Count )%>%
+select(dest_airport_state,"Delay_percent")
+
+#view(flight_dest_airport_state_summarised)
+
+flight_dest_airport_state_summarised%>%
+ ggplot(aes(x=dest_airport_state, y=flight_dest_airport_state_summarised$Delay_percent, fill=dest_airport_state))+
+  geom_bar(stat='identity', position='dodge') +
+  xlab("State")+
+  ylab("Delay Percentage")+
+  ggtitle("Delay percentage by state")+
+  theme(plot.title = element_text(hjust = 0),axis.text.x = element_text(size=8,angle=90))+
+  guides(fill = guide_legend(title = "State"))+
+  geom_text(aes(label=flight_dest_airport_state_summarised$Delay_percent), size=3,vjust = 0.2,angle=90, hjust=1)
+```
+
+
+# Summary of Results
+Write an executive summary of your overall findings and recommendations to the executives at Dulles Airport. Think of this section as your closing remarks of a presentation, where you summarize your key findings and make recommendations on flight operations and strategies for minimizing flight delays.
+
+Your executive summary must be written in a [professional tone](https://www.universalclass.com/articles/writing/business-writing/appropriate-tone-in-business-communications.htm), with minimal grammatical errors, and should include the following
+sections:
+
+1.  An introduction where you explain the business problem and goals of your data analysis
+
+    -   What problem(s) is this company trying to solve? Why are they important
+        to their future success?
+
+    -   What was the goal of your analysis? What questions were you 
+        trying to answer and why do they matter?
+
+
+2.  Highlights and key findings from your Exploratory Data Analysis section
+
+    -   What were the interesting findings from your analysis and
+        **why are they important for the business**?
+
+    -   This section is meant to **establish the need for your recommendations** 
+        in the following section
+        
+
+3.  Your recommendations to the company
+
+    -   Each recommendation must be supported by your data analysis results
+
+    -   You must clearly explain **why** you are making each recommendation and which results 
+        from your data analysis support this recommendation
+
+    -   You must also describe the potential business impact of your recommendation:
+
+        -   Why is this a good recommendation?
+
+        -   What benefits will the business achieve?
+      
+
+
+## Executive Summary
+
+Introduction
+
+The problem of flight delay is a very common problem faced by all over the world. In the recent years, because of the pandemic many airlines are suffering from huge loss. The given data is from 2016 year in which there is no specific reason of flight delays. As we can see the problem of flight delays can be resolved if we keep a track of some important finding such as arrival delays and departure delays. We can also investigate that which airline is more feasible to travel across the regions. By looking at such parameters we can figure out the best time, best day, best airline to travel. Using different visualizations of the given data will simplify the key findings.  The primary goal of this data analysis is that to simplify the data which can be used further to analyze which would be the best option for travel to a passenger. The questions which I tried to answer will give you the best options to travel across the United States.
+
+Key Findings
+
+The data visualizations help us to represent the data in the simplest form. I have used 5 different visualizations such as: Line chart, Bar chart, Pie chart, Scatter plot, boxplot. Bar charts help us to display the exact count of the required data.
+For example: In above bar graphs we can see the exact count of flights landed in different the cities, delay percentage of arrival of flight in different regions and states.   
+Line charts have used to get the result of busiest month of the year and busiest day in a week. By looking at this chart we can see the perfect day and perfect month of the year to travel. Also, line chart is used to display the average arrival delay of the month.
+Pie chart gives us the percent wise bifurcation of 100%. I have used pie chart to display the percentage of arrival of flights to the different regions which shows that maximum flights are departed to the west region. 
+Scatter plots are used to represent the relationship between two variables. Here, we can see the relationship between arrival delay and departure delay of each airline. We must consider the delay of a flight only it is delayed by 15 minutes. There are some outliers present in this graph which shows the inconsistent data. 
+Box plot summarizes the data from the sources and display the results in the single graph. In this graph we can see the boxplot for different airlines and the distance traveled by the airline.
+Heat map is used to show the relationship between all numeric variables. We can see the dark blue code for the one to one relationship of the variable. This relationship should be between -1 to 1.
+
+Recommendations
+
+By above data analysis I would recommend the busiest months like June, July should have a greater number of flights as it is the summer holiday season. United airlines show the maximum number of delays so the frequency of the flights should be managed. San Francisco has the greatest number of arrivals from IAD so we can see that the greater number of passengers are travelling to the west region. United airline is covering more distance, more flights, delays so we can conclude that it is the most recommended or chosen by the passengers. 
+
+
+
+
+
+
+
+
+
+
+
+
